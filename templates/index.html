@@ -6,37 +6,72 @@
     <style>
         body {
             font-family: Arial;
-            background: #111;
+            background: #0f0f0f;
             color: white;
             text-align: center;
-            padding: 50px;
+            padding: 40px;
         }
 
         h1 {
             color: #00ffcc;
+            margin-bottom: 20px;
+        }
+
+        form {
+            margin-bottom: 20px;
         }
 
         input {
-            padding: 10px;
-            width: 250px;
-            border-radius: 5px;
+            padding: 12px;
+            width: 260px;
+            border-radius: 8px;
             border: none;
+            outline: none;
         }
 
         button {
-            padding: 10px 15px;
+            padding: 12px 18px;
             background: #00ffcc;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #00ddb3;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+            padding: 10px;
+        }
+
+        .card {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 12px;
+            transition: 0.3s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
             cursor: pointer;
         }
 
-        .movie {
-            background: #222;
-            margin: 10px auto;
-            padding: 10px;
-            width: 300px;
-            border-radius: 8px;
+        .card:hover {
+            transform: scale(1.05);
+            background: #2a2a2a;
+        }
+
+        .title {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .result-title {
+            margin-top: 20px;
+            color: #aaa;
         }
     </style>
 </head>
@@ -50,12 +85,17 @@
         <button type="submit">Search</button>
     </form>
 
-    <h2>Results for: {{ movie_name }}</h2>
+    <h2 class="result-title">Results for: {{ movie_name }}</h2>
 
     {% if recommendations %}
+    <div class="grid">
         {% for movie in recommendations %}
-            <div class="movie">🎥 {{ movie }}</div>
+        <div class="card">
+            🎬
+            <div class="title">{{ movie }}</div>
+        </div>
         {% endfor %}
+    </div>
     {% endif %}
 
 </body>
