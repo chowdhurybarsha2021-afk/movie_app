@@ -7,11 +7,12 @@ app = Flask(__name__)
 
 print("Loading data...")
 
-# 📌 Load data (light)
+# 📌 Load data (light + safe)
 movies = pd.read_csv("movies.csv")
 ratings = pd.read_csv("ratings.csv")
 bollywood = pd.read_csv("bollywood_movies.csv")
 
+# merge datasets
 movies = pd.concat([movies, bollywood], ignore_index=True)
 data = pd.merge(ratings, movies, on='movieId')
 
@@ -20,7 +21,7 @@ top_movies = data['title'].value_counts().head(50).index
 movies = movies[movies['title'].isin(top_movies)]
 
 movies['title'] = movies['title'].fillna('')
-movie_titles = movies['title'].tolist()
+movie_titles = list(set(movies['title'].tolist()))  # remove duplicates
 
 print("Data loaded successfully!")
 
@@ -28,7 +29,7 @@ print("Data loaded successfully!")
 API_KEY = "716cd4cf50388a386342607172a33377"
 
 
-# 🎥 POSTER (SAFE + FAST)
+# 🎥 POSTER (ROBUST VERSION)
 def get_poster(movie_name):
     try:
         clean_name = movie_name.split("(")[0].strip()
@@ -44,18 +45,19 @@ def get_poster(movie_name):
 
         results = data.get("results", [])
 
-        if results:
-            poster = results[0].get("poster_path")
+        # 🔥 loop all results until valid poster found
+        for movie in results:
+            poster = movie.get("poster_path")
             if poster:
                 return "https://image.tmdb.org/t/p/w500" + poster
 
-    except:
-        pass
+    except Exception as e:
+        print("Poster error:", e)
 
     return "https://via.placeholder.com/300x450?text=No+Image"
 
 
-# 🤖 SIMPLE AI (NO MEMORY CRASH)
+# 🤖 RECOMMENDATION ENGINE (IMPROVED)
 def recommend(movie_name):
     movie_name = movie_name.lower().strip()
 
@@ -69,7 +71,8 @@ def recommend(movie_name):
 
     results = []
 
-    for name in matches[:10]:
+    # 🔥 show max 6 movies (UI clean)
+    for name in matches[:6]:
         results.append({
             "title": name,
             "poster": get_poster(name)
@@ -95,7 +98,7 @@ def home():
     )
 
 
-# 🚀 RUN
+# 🚀 RUN (Render safe)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
