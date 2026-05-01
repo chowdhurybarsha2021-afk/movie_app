@@ -7,18 +7,17 @@ app = Flask(__name__)
 
 print("Loading data...")
 
-# 📌 LOAD DATA (safe)
+# 📌 Load data (LIGHT + SAFE for Render)
 movies = pd.read_csv("movies.csv")
 ratings = pd.read_csv("ratings.csv")
 bollywood = pd.read_csv("bollywood_movies.csv")
 
-# merge
 movies = pd.concat([movies, bollywood], ignore_index=True)
 
-# ⚠️ reduce memory (Render safe)
 data = pd.merge(ratings, movies, on='movieId')
 
-data = data.sample(n=20000, random_state=42)
+# 🔥 reduce memory (VERY IMPORTANT for Render)
+data = data.sample(n=10000, random_state=42)
 
 movies = movies[movies['title'].notna()]
 movies['title'] = movies['title'].astype(str)
@@ -31,7 +30,7 @@ print("Data loaded successfully!")
 API_KEY = "716cd4cf50388a386342607172a33377"
 
 
-# 🎥 POSTER FUNCTION (SAFE)
+# 🎥 POSTER FUNCTION (SAFE + STABLE)
 def get_poster(movie_name):
     try:
         url = "https://api.themoviedb.org/3/search/movie"
@@ -40,14 +39,15 @@ def get_poster(movie_name):
             "query": movie_name
         }
 
-        res = requests.get(url, params=params, timeout=4)
+        res = requests.get(url, params=params, timeout=5)
         data = res.json()
 
         results = data.get("results", [])
 
-        for m in results:
-            if m.get("poster_path"):
-                return "https://image.tmdb.org/t/p/w500" + m["poster_path"]
+        if results:
+            for m in results:
+                if m.get("poster_path"):
+                    return "https://image.tmdb.org/t/p/w500" + m["poster_path"]
 
     except:
         pass
@@ -55,7 +55,7 @@ def get_poster(movie_name):
     return "https://via.placeholder.com/300x450?text=No+Image"
 
 
-# 🤖 RECOMMENDATION (GUARANTEED MULTI POSTER)
+# 🤖 RECOMMENDATION (GUARANTEED MULTI OUTPUT)
 def recommend(movie_name):
     movie_name = movie_name.lower().strip()
 
@@ -94,7 +94,7 @@ def home():
     )
 
 
-# 🚀 RUN (Render safe PORT fix)
+# 🚀 RUN (Render FIXED PORT)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
