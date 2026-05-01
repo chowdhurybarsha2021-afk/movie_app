@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request
 import pandas as pd
 import os
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 app = Flask(__name__)
@@ -18,43 +19,43 @@ movies = pd.concat([movies, bollywood], ignore_index=True)
 # 📌 Merge ratings
 data = pd.merge(ratings, movies, on='movieId')
 
-# 🔥 Reduce memory usage (Render safe)
+# 🔥 Reduce memory usage
 top_movies = data['title'].value_counts().head(100).index
 data = data[data['title'].isin(top_movies)]
 
-# 📊 Matrix
-user_movie_matrix = data.pivot_table(index='userId', columns='title', values='rating')
+# 🧠 AI CONTENT FEATURES (REAL NLP MODEL)
+movies['title'] = movies['title'].fillna('')
 
-# 🤖 AI MODEL (COSINE SIMILARITY)
-movie_similarity = cosine_similarity(user_movie_matrix.fillna(0).T)
+tfidf = TfidfVectorizer(stop_words='english')
+tfidf_matrix = tfidf.fit_transform(movies['title'])
 
-movie_similarity = pd.DataFrame(
-    movie_similarity,
-    index=user_movie_matrix.columns,
-    columns=user_movie_matrix.columns
-)
+cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
+
+movie_titles = movies['title'].tolist()
 
 print("Data loaded successfully!")
 
 
-# 🧠 SMART RECOMMENDATION (AI VERSION)
+# 🤖 AI RECOMMENDATION FUNCTION
 def recommend(movie_name):
     movie_name = movie_name.lower().strip()
 
-    matches = [
-        title for title in movie_similarity.columns
-        if movie_name in title.lower() or title.lower() in movie_name
-    ]
+    matches = [i for i, title in enumerate(movie_titles)
+               if movie_name in title.lower() or title.lower() in movie_name]
 
     if not matches:
         return ["No match found"]
 
-    best_match = matches[0]
+    idx = matches[0]
 
-    similar_movies = movie_similarity[best_match].sort_values(ascending=False)
-    similar_movies = similar_movies.drop(best_match, errors='ignore')
+    sim_scores = list(enumerate(cosine_sim[idx]))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
 
-    return similar_movies.head(10).index.tolist()
+    sim_scores = sim_scores[1:11]
+
+    movie_indices = [i[0] for i in sim_scores]
+
+    return [movie_titles[i] for i in movie_indices]
 
 
 # 🌐 Routes
