@@ -7,21 +7,20 @@ app = Flask(__name__)
 
 print("Loading data...")
 
-# 📌 Load data (light + safe)
+# 📌 Load data
 movies = pd.read_csv("movies.csv")
 ratings = pd.read_csv("ratings.csv")
 bollywood = pd.read_csv("bollywood_movies.csv")
 
-# merge datasets
 movies = pd.concat([movies, bollywood], ignore_index=True)
 data = pd.merge(ratings, movies, on='movieId')
 
-# 🔥 LIMIT DATA (Render safe)
-top_movies = data['title'].value_counts().head(50).index
+# 🔥 keep more data (IMPORTANT)
+top_movies = data['title'].value_counts().head(500).index
 movies = movies[movies['title'].isin(top_movies)]
 
 movies['title'] = movies['title'].fillna('')
-movie_titles = list(set(movies['title'].tolist()))  # remove duplicates
+movie_titles = list(set(movies['title'].tolist()))
 
 print("Data loaded successfully!")
 
@@ -29,15 +28,13 @@ print("Data loaded successfully!")
 API_KEY = "716cd4cf50388a386342607172a33377"
 
 
-# 🎥 POSTER (ROBUST VERSION)
+# 🎥 POSTER FUNCTION
 def get_poster(movie_name):
     try:
-        clean_name = movie_name.split("(")[0].strip()
-
         url = "https://api.themoviedb.org/3/search/movie"
         params = {
             "api_key": API_KEY,
-            "query": clean_name
+            "query": movie_name
         }
 
         res = requests.get(url, params=params, timeout=4)
@@ -45,40 +42,40 @@ def get_poster(movie_name):
 
         results = data.get("results", [])
 
-        # 🔥 loop all results until valid poster found
-        for movie in results:
-            poster = movie.get("poster_path")
-            if poster:
-                return "https://image.tmdb.org/t/p/w500" + poster
+        for m in results:
+            if m.get("poster_path"):
+                return "https://image.tmdb.org/t/p/w500" + m["poster_path"]
 
-    except Exception as e:
-        print("Poster error:", e)
+    except:
+        pass
 
     return "https://via.placeholder.com/300x450?text=No+Image"
 
 
-# 🤖 RECOMMENDATION ENGINE (IMPROVED)
+# 🤖 RECOMMENDATION (MULTI POSTER FIX)
 def recommend(movie_name):
     movie_name = movie_name.lower().strip()
 
-    matches = [
-        title for title in movie_titles
-        if movie_name in title.lower()
-    ]
+    results_list = []
 
-    if not matches:
+    count = 0
+
+    # 🔥 find multiple matches properly
+    for title in movie_titles:
+        if movie_name in title.lower():
+            results_list.append({
+                "title": title,
+                "poster": get_poster(title)
+            })
+            count += 1
+
+        if count == 6:   # 👈 LIMIT 6 posters
+            break
+
+    if not results_list:
         return [{"title": "No match found", "poster": None}]
 
-    results = []
-
-    # 🔥 show max 6 movies (UI clean)
-    for name in matches[:6]:
-        results.append({
-            "title": name,
-            "poster": get_poster(name)
-        })
-
-    return results
+    return results_list
 
 
 # 🌐 ROUTE
@@ -98,7 +95,5 @@ def home():
     )
 
 
-# 🚀 RUN (Render safe)
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+# 🚀 RUN
+if __name
