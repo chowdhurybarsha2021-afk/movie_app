@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request
 import pandas as pd
 import os
+import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -13,7 +14,7 @@ movies = pd.read_csv("movies.csv")
 ratings = pd.read_csv("ratings.csv")
 bollywood = pd.read_csv("bollywood_movies.csv")
 
-# 📌 Merge movies (Hollywood + Bollywood)
+# 📌 Merge movies
 movies = pd.concat([movies, bollywood], ignore_index=True)
 
 # 📌 Merge ratings
@@ -23,7 +24,7 @@ data = pd.merge(ratings, movies, on='movieId')
 top_movies = data['title'].value_counts().head(100).index
 data = data[data['title'].isin(top_movies)]
 
-# 🧠 AI CONTENT FEATURES (REAL NLP MODEL)
+# 🧠 AI FEATURES
 movies['title'] = movies['title'].fillna('')
 
 tfidf = TfidfVectorizer(stop_words='english')
@@ -35,16 +36,40 @@ movie_titles = movies['title'].tolist()
 
 print("Data loaded successfully!")
 
+# 🎬 TMDB API KEY
+API_KEY = "716cd4cf50388a386342607172a33377"
+
+
+# 🎥 GET POSTER (DEBUG VERSION)
+def get_poster(movie_name):
+    url = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={movie_name}"
+    
+    response = requests.get(url)
+    data = response.json()
+
+    print("API CHECK:", movie_name)  # 🔥 DEBUG
+
+    results = data.get("results", [])
+
+    if len(results) > 0:
+        poster_path = results[0].get("poster_path")
+        if poster_path:
+            return "https://image.tmdb.org/t/p/w500" + poster_path
+
+    return None
+
 
 # 🤖 AI RECOMMENDATION FUNCTION
 def recommend(movie_name):
     movie_name = movie_name.lower().strip()
 
-    matches = [i for i, title in enumerate(movie_titles)
-               if movie_name in title.lower() or title.lower() in movie_name]
+    matches = [
+        i for i, title in enumerate(movie_titles)
+        if movie_name in title.lower() or title.lower() in movie_name
+    ]
 
     if not matches:
-        return ["No match found"]
+        return [{"title": "No match found", "poster": None}]
 
     idx = matches[0]
 
@@ -55,10 +80,22 @@ def recommend(movie_name):
 
     movie_indices = [i[0] for i in sim_scores]
 
-    return [movie_titles[i] for i in movie_indices]
+    results = []
+
+    for i in movie_indices:
+        name = movie_titles[i]
+
+        poster = get_poster(name)
+
+        results.append({
+            "title": name,
+            "poster": poster
+        })
+
+    return results
 
 
-# 🌐 Routes
+# 🌐 ROUTES
 @app.route("/", methods=["GET", "POST"])
 def home():
     recommendations = None
@@ -73,7 +110,7 @@ def home():
                            movie_name=movie_name)
 
 
-# 🚀 Render safe run
+# 🚀 RUN APP
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
