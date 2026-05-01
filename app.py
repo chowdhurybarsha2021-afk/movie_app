@@ -6,25 +6,29 @@ app = Flask(__name__)
 
 print("Loading data...")
 
-# Load dataset
+# 📌 Load datasets
 movies = pd.read_csv("movies.csv")
 ratings = pd.read_csv("ratings.csv")
+bollywood = pd.read_csv("bollywood.csv")  # ⭐ added
 
-# Merge data
+# 📌 Merge all movies (Hollywood + Bollywood)
+movies = pd.concat([movies, bollywood], ignore_index=True)
+
+# Merge ratings
 data = pd.merge(ratings, movies, on='movieId')
 
-# Reduce memory usage (important for Render free plan)
+# 🔥 Reduce memory usage
 top_movies = data['title'].value_counts().head(100).index
 data = data[data['title'].isin(top_movies)]
 
-# Create matrix
+# 📊 Matrix
 user_movie_matrix = data.pivot_table(index='userId', columns='title', values='rating')
 movie_similarity = user_movie_matrix.corr()
 
 print("Data loaded successfully!")
 
 
-# 🧠 SMART RECOMMENDATION FUNCTION
+# 🧠 SMART RECOMMENDATION
 def recommend(movie_name):
     movie_name = movie_name.lower()
 
