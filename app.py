@@ -1,29 +1,25 @@
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request
 import pandas as pd
 import os
 import requests
 
 app = Flask(__name__)
 
-# 🔐 SESSION FIX (mobile + render safe)
-app.secret_key = "secret123"
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_SECURE"] = False
-
 print("Loading data...")
 
 # =========================
-# 📌 LOAD DATA (LIGHT + SAFE)
+# 📌 LOAD DATA (LIGHT + SAFE FOR RENDER)
 # =========================
-movies = pd.read_csv("movies.csv", usecols=["movieId", "title"])
-ratings = pd.read_csv("ratings.csv", usecols=["movieId"])
-bollywood = pd.read_csv("bollywood_movies.csv", usecols=["movieId", "title"])
+movies = pd.read_csv("movies.csv")[["movieId", "title"]]
+ratings = pd.read_csv("ratings.csv")[["movieId"]]
+bollywood = pd.read_csv("bollywood_movies.csv")[["movieId", "title"]]
 
 movies = pd.concat([movies, bollywood], ignore_index=True)
 movies = movies.dropna(subset=["title"])
 
 data = pd.merge(ratings, movies, on="movieId")
 
+# 🔥 LIMIT (VERY IMPORTANT FOR RENDER)
 top_titles = data["title"].value_counts().head(60).index
 movies = movies[movies["title"].isin(top_titles)]
 
@@ -39,7 +35,7 @@ BASE_URL = "https://api.themoviedb.org/3/search/movie"
 IMG_URL = "https://image.tmdb.org/t/p/w500"
 
 # =========================
-# 🎥 POSTER FUNCTION
+# 🎥 GET POSTER (SAFE)
 # =========================
 def get_poster(movie_name):
     try:
@@ -48,15 +44,16 @@ def get_poster(movie_name):
         res = requests.get(
             BASE_URL,
             params={"api_key": API_KEY, "query": clean_name},
-            timeout=3
+            timeout=4
         )
 
         data = res.json()
         results = data.get("results", [])
 
-        for movie in results:
-            if movie.get("poster_path"):
-                return IMG_URL + movie["poster_path"]
+        for movie in results[:3]:
+            poster = movie.get("poster_path")
+            if poster:
+                return IMG_URL + poster
 
     except:
         pass
@@ -64,12 +61,15 @@ def get_poster(movie_name):
     return "https://via.placeholder.com/300x450?text=No+Image"
 
 # =========================
-# 🤖 RECOMMENDER
+# 🤖 RECOMMENDER (SIMPLE + FAST)
 # =========================
 def recommend(movie_name):
     movie_name = movie_name.lower().strip()
 
-    matches = [t for t in movie_titles if movie_name in t.lower()]
+    matches = [
+        title for title in movie_titles
+        if movie_name in title.lower()
+    ]
 
     if not matches:
         return [{"title": "No match found 😢", "poster": None}]
@@ -85,56 +85,10 @@ def recommend(movie_name):
     return results
 
 # =========================
-# 🔐 USERS
+# 🌐 ROUTE
 # =========================
-users = {
-    "admin": "1234",
-    "user": "1234"
-}
-
-# =========================
-# 🔥 ROOT → LOGIN FIRST
-# =========================
-@app.route("/")
-def root():
-    return redirect("/login")
-
-# =========================
-# 🔐 LOGIN
-# =========================
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    error = None
-
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-
-        if username in users and users[username] == password:
-            session["user"] = username
-            return redirect("/home")
-        else:
-            error = "Invalid username or password"
-
-    return render_template("login.html", error=error)
-
-# =========================
-# 🚪 LOGOUT
-# =========================
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/login")
-
-# =========================
-# 🏠 HOME PAGE (MOVIE APP)
-# =========================
-@app.route("/home", methods=["GET", "POST"])
+@app.route("/", methods=["GET", "POST"])
 def home():
-
-    if "user" not in session:
-        return redirect("/login")
-
     movie_name = ""
     recommendations = []
 
@@ -146,12 +100,11 @@ def home():
     return render_template(
         "index.html",
         recommendations=recommendations,
-        movie_name=movie_name,
-        user=session.get("user")
+        movie_name=movie_name
     )
 
 # =========================
-# 🚀 RUN
+# 🚀 RUN (RENDER SAFE)
 # =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
