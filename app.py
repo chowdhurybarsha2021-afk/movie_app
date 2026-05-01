@@ -40,23 +40,25 @@ print("Data loaded successfully!")
 API_KEY = "716cd4cf50388a386342607172a33377"
 
 
-# 🎥 GET POSTER (DEBUG VERSION)
+# 🎥 GET POSTER (FINAL FIX)
 def get_poster(movie_name):
-    url = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={movie_name}"
-    
-    response = requests.get(url)
-    data = response.json()
+    try:
+        url = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={movie_name}"
+        response = requests.get(url)
+        data = response.json()
 
-    print("API CHECK:", movie_name)  # 🔥 DEBUG
+        results = data.get("results", [])
 
-    results = data.get("results", [])
+        # 🔥 try multiple results
+        for movie in results:
+            if movie.get("poster_path"):
+                return "https://image.tmdb.org/t/p/w500" + movie["poster_path"]
 
-    if len(results) > 0:
-        poster_path = results[0].get("poster_path")
-        if poster_path:
-            return "https://image.tmdb.org/t/p/w500" + poster_path
+    except Exception as e:
+        print("Poster error:", e)
 
-    return None
+    # fallback image
+    return "https://via.placeholder.com/300x450?text=No+Image"
 
 
 # 🤖 AI RECOMMENDATION FUNCTION
@@ -84,7 +86,6 @@ def recommend(movie_name):
 
     for i in movie_indices:
         name = movie_titles[i]
-
         poster = get_poster(name)
 
         results.append({
