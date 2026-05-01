@@ -4,7 +4,11 @@ import os
 import requests
 
 app = Flask(__name__)
+
+# 🔐 SESSION FIX (mobile + render safe)
 app.secret_key = "secret123"
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = False
 
 print("Loading data...")
 
@@ -20,7 +24,6 @@ movies = movies.dropna(subset=["title"])
 
 data = pd.merge(ratings, movies, on="movieId")
 
-# 🔥 MEMORY SAFE
 top_titles = data["title"].value_counts().head(60).index
 movies = movies[movies["title"].isin(top_titles)]
 
@@ -55,8 +58,8 @@ def get_poster(movie_name):
             if movie.get("poster_path"):
                 return IMG_URL + movie["poster_path"]
 
-    except Exception as e:
-        print("Poster error:", e)
+    except:
+        pass
 
     return "https://via.placeholder.com/300x450?text=No+Image"
 
@@ -66,10 +69,7 @@ def get_poster(movie_name):
 def recommend(movie_name):
     movie_name = movie_name.lower().strip()
 
-    matches = [
-        title for title in movie_titles
-        if movie_name in title.lower()
-    ]
+    matches = [t for t in movie_titles if movie_name in t.lower()]
 
     if not matches:
         return [{"title": "No match found 😢", "poster": None}]
@@ -85,19 +85,23 @@ def recommend(movie_name):
     return results
 
 # =========================
-# 🔐 LOGIN SYSTEM
+# 🔐 USERS
 # =========================
 users = {
     "admin": "1234",
     "user": "1234"
 }
 
-# 🔥 ROOT → ALWAYS LOGIN FIRST
+# =========================
+# 🔥 ROOT → LOGIN FIRST
+# =========================
 @app.route("/")
 def root():
-    return redirect(url_for("login"))
+    return redirect("/login")
 
+# =========================
 # 🔐 LOGIN
+# =========================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     error = None
@@ -108,31 +112,34 @@ def login():
 
         if username in users and users[username] == password:
             session["user"] = username
-            return redirect(url_for("home"))
+            return redirect("/home")
         else:
             error = "Invalid username or password"
 
     return render_template("login.html", error=error)
 
-# 🔓 LOGOUT
+# =========================
+# 🚪 LOGOUT
+# =========================
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect(url_for("login"))
+    return redirect("/login")
 
-# 🏠 HOME (AFTER LOGIN)
+# =========================
+# 🏠 HOME PAGE (MOVIE APP)
+# =========================
 @app.route("/home", methods=["GET", "POST"])
 def home():
 
     if "user" not in session:
-        return redirect(url_for("login"))
+        return redirect("/login")
 
     movie_name = ""
     recommendations = []
 
     if request.method == "POST":
         movie_name = request.form.get("movie")
-
         if movie_name:
             recommendations = recommend(movie_name)
 
