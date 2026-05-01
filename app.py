@@ -7,19 +7,22 @@ app = Flask(__name__)
 
 print("Loading data...")
 
-# 📌 Load data
+# 📌 LOAD DATA (safe)
 movies = pd.read_csv("movies.csv")
 ratings = pd.read_csv("ratings.csv")
 bollywood = pd.read_csv("bollywood_movies.csv")
 
+# merge
 movies = pd.concat([movies, bollywood], ignore_index=True)
+
+# ⚠️ reduce memory (Render safe)
 data = pd.merge(ratings, movies, on='movieId')
 
-# 🔥 keep more data (IMPORTANT)
-top_movies = data['title'].value_counts().head(500).index
-movies = movies[movies['title'].isin(top_movies)]
+data = data.sample(n=20000, random_state=42)
 
-movies['title'] = movies['title'].fillna('')
+movies = movies[movies['title'].notna()]
+movies['title'] = movies['title'].astype(str)
+
 movie_titles = list(set(movies['title'].tolist()))
 
 print("Data loaded successfully!")
@@ -28,7 +31,7 @@ print("Data loaded successfully!")
 API_KEY = "716cd4cf50388a386342607172a33377"
 
 
-# 🎥 POSTER FUNCTION
+# 🎥 POSTER FUNCTION (SAFE)
 def get_poster(movie_name):
     try:
         url = "https://api.themoviedb.org/3/search/movie"
@@ -52,30 +55,26 @@ def get_poster(movie_name):
     return "https://via.placeholder.com/300x450?text=No+Image"
 
 
-# 🤖 RECOMMENDATION (MULTI POSTER FIX)
+# 🤖 RECOMMENDATION (GUARANTEED MULTI POSTER)
 def recommend(movie_name):
     movie_name = movie_name.lower().strip()
 
-    results_list = []
+    results = []
 
-    count = 0
-
-    # 🔥 find multiple matches properly
     for title in movie_titles:
         if movie_name in title.lower():
-            results_list.append({
+            results.append({
                 "title": title,
                 "poster": get_poster(title)
             })
-            count += 1
 
-        if count == 6:   # 👈 LIMIT 6 posters
+        if len(results) == 6:   # 🔥 limit 6 posters
             break
 
-    if not results_list:
+    if not results:
         return [{"title": "No match found", "poster": None}]
 
-    return results_list
+    return results
 
 
 # 🌐 ROUTE
@@ -95,5 +94,7 @@ def home():
     )
 
 
-# 🚀 RUN
-if __name
+# 🚀 RUN (Render safe PORT fix)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
