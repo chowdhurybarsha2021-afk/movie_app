@@ -9,15 +9,15 @@ print("Loading data...")
 # 📌 Load datasets
 movies = pd.read_csv("movies.csv")
 ratings = pd.read_csv("ratings.csv")
-bollywood = pd.read_csv("bollywood.csv")  # ⭐ added
+bollywood = pd.read_csv("bollywood_movies.csv")  # ✔ FIXED FILE NAME
 
-# 📌 Merge all movies (Hollywood + Bollywood)
+# 📌 Merge Hollywood + Bollywood
 movies = pd.concat([movies, bollywood], ignore_index=True)
 
-# Merge ratings
+# 📌 Merge ratings
 data = pd.merge(ratings, movies, on='movieId')
 
-# 🔥 Reduce memory usage
+# 🔥 Reduce memory usage (Render safe)
 top_movies = data['title'].value_counts().head(100).index
 data = data[data['title'].isin(top_movies)]
 
