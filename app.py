@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request
 import pandas as pd
 import os
+from sklearn.metrics.pairwise import cosine_similarity
 
 app = Flask(__name__)
 
@@ -9,9 +10,9 @@ print("Loading data...")
 # 📌 Load datasets
 movies = pd.read_csv("movies.csv")
 ratings = pd.read_csv("ratings.csv")
-bollywood = pd.read_csv("bollywood_movies.csv")  # ✔ FIXED FILE NAME
+bollywood = pd.read_csv("bollywood_movies.csv")
 
-# 📌 Merge Hollywood + Bollywood
+# 📌 Merge movies (Hollywood + Bollywood)
 movies = pd.concat([movies, bollywood], ignore_index=True)
 
 # 📌 Merge ratings
@@ -23,17 +24,27 @@ data = data[data['title'].isin(top_movies)]
 
 # 📊 Matrix
 user_movie_matrix = data.pivot_table(index='userId', columns='title', values='rating')
-movie_similarity = user_movie_matrix.corr()
+
+# 🤖 AI MODEL (COSINE SIMILARITY)
+movie_similarity = cosine_similarity(user_movie_matrix.fillna(0).T)
+
+movie_similarity = pd.DataFrame(
+    movie_similarity,
+    index=user_movie_matrix.columns,
+    columns=user_movie_matrix.columns
+)
 
 print("Data loaded successfully!")
 
 
-# 🧠 SMART RECOMMENDATION
+# 🧠 SMART RECOMMENDATION (AI VERSION)
 def recommend(movie_name):
-    movie_name = movie_name.lower()
+    movie_name = movie_name.lower().strip()
 
-    matches = [title for title in movie_similarity.columns
-               if movie_name in title.lower()]
+    matches = [
+        title for title in movie_similarity.columns
+        if movie_name in title.lower() or title.lower() in movie_name
+    ]
 
     if not matches:
         return ["No match found"]
