@@ -8,20 +8,28 @@ print("Loading data...")
 movies = pd.read_csv("movies.csv")
 ratings = pd.read_csv("ratings.csv")
 
+# 🔥 MEMORY SAFE: reduce dataset size
 data = pd.merge(ratings, movies, on='movieId')
 
+# 👉 only top popular movies (reduce RAM)
+top_movies = data['title'].value_counts().head(100).index
+data = data[data['title'].isin(top_movies)]
+
+# 👉 smaller pivot
 user_movie_matrix = data.pivot_table(index='userId', columns='title', values='rating')
 
+# 👉 smaller similarity
 movie_similarity = user_movie_matrix.corr()
 
 print("Data loaded successfully!")
+
 
 def recommend(movie_name):
     if movie_name in movie_similarity.columns:
         similar_movies = movie_similarity[movie_name].sort_values(ascending=False)
         similar_movies = similar_movies.drop(movie_name, errors='ignore')
         return similar_movies.head(10).index.tolist()
-    return None
+    return ["No recommendations found"]
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -38,7 +46,7 @@ def home():
                            movie_name=movie_name)
 
 
-# ✅ IMPORTANT: Render compatible run
+# ✅ Render compatible run
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 10000))
