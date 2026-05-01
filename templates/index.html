@@ -3,29 +3,26 @@
 <head>
     <title>Movie Recommender</title>
 </head>
-<body style="margin:0; font-family:Arial; background:#f4f4f4;">
+<body>
 
-<div style="max-width:500px; margin:50px auto; background:white; padding:20px; border-radius:10px; box-shadow:0 0 10px #ccc; text-align:center;">
+<h1>🎬 Movie Recommender</h1>
 
-    <h1>🎬 Movie Recommender</h1>
+<form method="POST">
+    <input type="text" name="movie" placeholder="Enter movie name" required>
+    <button type="submit">Search</button>
+</form>
 
-    <form method="POST">
-        <input type="text" name="movie" placeholder="Enter movie name"
-        style="width:80%; padding:10px; margin:10px 0;">
-        <br>
-        <button type="submit" style="padding:10px 20px;">Search</button>
-    </form>
+{% if movie_name %}
+<h3>Results for: {{ movie_name }}</h3>
+{% endif %}
 
-    {% if recommendations %}
-        <h3>Results for: {{ movie_name }}</h3>
-        <div style="text-align:left;">
-            {% for m in recommendations %}
-                <p>🎥 {{ m }}</p>
-            {% endfor %}
-        </div>
-    {% endif %}
-
-</div>
+{% if recommendations %}
+<ul>
+    {% for movie in recommendations %}
+    <li>{{ movie }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
 
 </body>
 </html>
