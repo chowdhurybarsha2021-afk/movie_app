@@ -6,37 +6,43 @@ app = Flask(__name__)
 
 print("Loading data...")
 
+# Load dataset
 movies = pd.read_csv("movies.csv")
 ratings = pd.read_csv("ratings.csv")
 
-# 🔥 reduce memory usage
+# Merge data
 data = pd.merge(ratings, movies, on='movieId')
 
+# Reduce memory usage (important for Render free plan)
 top_movies = data['title'].value_counts().head(100).index
 data = data[data['title'].isin(top_movies)]
 
+# Create matrix
 user_movie_matrix = data.pivot_table(index='userId', columns='title', values='rating')
 movie_similarity = user_movie_matrix.corr()
 
 print("Data loaded successfully!")
 
 
-# 🧠 SMART SEARCH (NEW)
+# 🧠 SMART RECOMMENDATION FUNCTION
 def recommend(movie_name):
     movie_name = movie_name.lower()
 
     matches = [title for title in movie_similarity.columns
                if movie_name in title.lower()]
 
-    if len(matches) > 0:
-        best_match = matches[0]
-        similar_movies = movie_similarity[best_match].sort_values(ascending=False)
-        similar_movies = similar_movies.drop(best_match, errors='ignore')
-        return similar_movies.head(10).index.tolist()
+    if not matches:
+        return ["No match found"]
 
-    return ["No match found"]
+    best_match = matches[0]
+
+    similar_movies = movie_similarity[best_match].sort_values(ascending=False)
+    similar_movies = similar_movies.drop(best_match, errors='ignore')
+
+    return similar_movies.head(10).index.tolist()
 
 
+# 🌐 Routes
 @app.route("/", methods=["GET", "POST"])
 def home():
     recommendations = None
